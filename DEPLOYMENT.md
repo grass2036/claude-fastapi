@@ -4,8 +4,8 @@
 
 本项目采用微服务架构，包含以下服务：
 
-- **Backend (FastAPI)**: 后端API服务，端口8000
-- **Frontend (Vue.js)**: 前端界面，端口3000  
+- **Backend (FastAPI)**: 后端API服务，端口8000，支持Redis缓存
+- **Frontend (Vue.js + Vuetify)**: 前端界面，端口3000，使用Vuetify Material Design组件  
 - **Database (PostgreSQL)**: 数据库，端口5433
 - **Cache (Redis)**: 缓存服务，端口6379
 - **Proxy (Nginx)**: 反向代理，端口80
@@ -131,8 +131,9 @@ SECRET_KEY=your-secret-key-here
 2. 重启backend容器：`docker-compose restart backend`
 
 ### 修改前端页面
-1. 编辑 `frontend/src/` 下的Vue组件
+1. 编辑 `frontend/src/` 下的Vue组件，使用Vuetify Material Design组件
 2. 修改会自动热重载
+3. 可使用Material Design Icons (mdi-*)
 
 ### 数据库迁移
 ```bash
@@ -185,11 +186,45 @@ docker-compose exec redis redis-cli ping
 - 健康检查端点
 - 错误追踪 (Sentry)
 
+## 前端技术栈
+
+### Vuetify Material Design
+项目前端使用Vuetify 3.x，提供以下特性：
+- **Material Design 3** 设计规范
+- **响应式布局** - 自动适配桌面和移动端
+- **主题系统** - 支持亮色/暗色主题切换
+- **图标库** - 内置Material Design Icons
+- **组件库** - 丰富的UI组件（卡片、按钮、表单等）
+
+### 主要组件使用示例
+```vue
+<!-- 卡片组件 -->
+<v-card>
+  <v-card-title>标题</v-card-title>
+  <v-card-text>内容</v-card-text>
+  <v-card-actions>
+    <v-btn color="primary">操作按钮</v-btn>
+  </v-card-actions>
+</v-card>
+
+<!-- 响应式布局 -->
+<v-row>
+  <v-col cols="12" md="6">
+    <!-- 内容 -->
+  </v-col>
+</v-row>
+```
+
 ## 目录结构
 ```
 claude-fastapi/
 ├── app/                    # FastAPI后端代码
-├── frontend/               # Vue.js前端代码
+├── frontend/               # Vue.js + Vuetify前端代码
+│   ├── src/
+│   │   ├── components/     # Vue组件
+│   │   ├── views/          # 页面组件
+│   │   ├── router/         # 路由配置
+│   │   └── store/          # 状态管理
 ├── docker-compose.yml      # Docker编排配置
 ├── Dockerfile.backend      # 后端容器配置
 ├── Dockerfile.frontend     # 前端容器配置
