@@ -4,7 +4,7 @@ from datetime import timedelta
 from ...db.base import get_db
 from ...schemas.user import (
     UserCreate, UserLogin, UserResponse, Token, 
-    TokenRefresh, UserProfile, UserChangePassword
+    TokenRefresh, UserProfile, UserChangePassword, UserUpdate
 )
 from ...crud.user import user_crud
 from ...core.security import security
@@ -19,7 +19,32 @@ router = APIRouter()
              response_model=UserResponse, 
              status_code=status.HTTP_201_CREATED,
              summary="用户注册",
-             description="创建新用户账户")
+             description="创建新用户账户",
+             responses={
+                 201: {
+                     "description": "用户注册成功",
+                     "content": {
+                         "application/json": {
+                             "example": {
+                                 "id": 1,
+                                 "username": "johndoe",
+                                 "email": "john@example.com",
+                                 "full_name": "John Doe",
+                                 "phone": "13800138000",
+                                 "bio": "Software Engineer",
+                                 "avatar": None,
+                                 "is_active": True,
+                                 "is_verified": False,
+                                 "created_at": "2023-01-01T00:00:00Z",
+                                 "updated_at": "2023-01-01T00:00:00Z",
+                                 "last_login_at": None
+                             }
+                         }
+                     }
+                 },
+                 400: {"description": "注册数据验证失败（用户名/邮箱已存在、密码不匹配等）"},
+                 422: {"description": "输入数据格式错误"}
+             })
 async def register(
     user_data: UserCreate,
     db: Session = Depends(get_db)
@@ -55,7 +80,24 @@ async def register(
 @router.post("/login", 
              response_model=Token,
              summary="用户登录",
-             description="用户登录并获取访问令牌")
+             description="用户登录并获取访问令牌",
+             responses={
+                 200: {
+                     "description": "登录成功，返回访问令牌",
+                     "content": {
+                         "application/json": {
+                             "example": {
+                                 "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                                 "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                                 "token_type": "bearer",
+                                 "expires_in": 1800
+                             }
+                         }
+                     }
+                 },
+                 401: {"description": "用户名或密码错误"},
+                 422: {"description": "输入数据格式错误"}
+             })
 async def login(
     login_data: UserLogin,
     db: Session = Depends(get_db)
@@ -100,7 +142,12 @@ async def login(
 @router.post("/refresh", 
              response_model=Token,
              summary="刷新令牌",
-             description="使用刷新令牌获取新的访问令牌")
+             description="使用刷新令牌获取新的访问令牌",
+             responses={
+                 200: {"description": "令牌刷新成功"},
+                 401: {"description": "刷新令牌无效或已过期"},
+                 422: {"description": "输入数据格式错误"}
+             })
 async def refresh_token(
     token_data: TokenRefresh,
     db: Session = Depends(get_db)
@@ -158,52 +205,15 @@ async def refresh_token(
         )
 
 
-@router.get("/profile", 
-            response_model=UserProfile,
-            summary="获取用户档案",
-            description="获取当前登录用户的详细信息")
-async def get_profile(
-    current_user: User = Depends(get_current_user)
-):
-    """
-    获取当前用户档案
-    
-    需要有效的访问令牌
-    """
-    return {"user": current_user}
-
-
-@router.put("/profile", 
-            response_model=UserResponse,
-            summary="更新用户档案",
-            description="更新当前登录用户的个人信息")
-async def update_profile(
-    user_update: UserUpdate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    更新用户档案
-    
-    - **full_name**: 全名
-    - **phone**: 手机号
-    - **bio**: 个人简介
-    - **avatar**: 头像URL
-    """
-    updated_user = user_crud.update_user(db, current_user.id, user_update)
-    
-    if not updated_user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="用户不存在"
-        )
-    
-    return updated_user
-
-
 @router.post("/change-password",
              summary="修改密码",
-             description="修改当前用户密码")
+             description="修改当前用户密码",
+             responses={
+                 200: {"description": "密码修改成功"},
+                 400: {"description": "当前密码错误或新密码不匹配"},
+                 401: {"description": "未授权访问"},
+                 422: {"description": "输入数据格式错误"}
+             })
 async def change_password(
     password_data: UserChangePassword,
     current_user: User = Depends(get_current_user),
@@ -242,7 +252,11 @@ async def change_password(
 
 @router.post("/logout",
              summary="用户登出",
-             description="用户登出（客户端需要清除令牌）")
+             description="用户登出（客户端需要清除令牌）",
+             responses={
+                 200: {"description": "登出成功"},
+                 401: {"description": "未授权访问"}
+             })
 async def logout(
     current_user: User = Depends(get_current_user)
 ):

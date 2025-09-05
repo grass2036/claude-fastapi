@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 # 绝对导入，避免相对导入问题
@@ -52,3 +53,14 @@ class User(Base):
     @property
     def display_name(self):
         return self.full_name or self.username
+    
+    def has_role(self, role_code: str) -> bool:
+        """检查用户是否拥有指定角色"""
+        from .role import user_roles, Role
+        # 这里需要在实际使用时通过数据库查询实现
+        return False
+    
+    def has_permission(self, permission_code: str) -> bool:
+        """检查用户是否拥有指定权限"""
+        # 这里需要在实际使用时通过数据库查询实现
+        return False

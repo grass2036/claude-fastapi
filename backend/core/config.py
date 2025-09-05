@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
+from typing import Optional, Union
 import os
 
 
@@ -31,7 +31,14 @@ class Settings(BaseSettings):
     BCRYPT_ROUNDS: int = 12
     
     # CORS配置
-    ALLOWED_ORIGINS: list = ["http://localhost:3000", "http://frontend:3000"]
+    ALLOWED_ORIGINS: Union[list[str], str] = ["http://localhost:3000", "http://frontend:3000"]
+    
+    @property
+    def allowed_origins_list(self) -> list[str]:
+        """将ALLOWED_ORIGINS转换为列表格式"""
+        if isinstance(self.ALLOWED_ORIGINS, str):
+            return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
+        return self.ALLOWED_ORIGINS
     
     class Config:
         env_file = ".env"

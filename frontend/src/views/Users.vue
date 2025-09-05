@@ -15,6 +15,7 @@
             color="primary"
             large
             @click="openAddDialog"
+            v-permission="'user:create'"
           >
             <v-icon left>mdi-plus</v-icon>
             添加用户
@@ -133,6 +134,7 @@
               small
               color="primary"
               @click="viewUser(item)"
+              v-permission="'user:view'"
             >
               <v-icon>mdi-eye</v-icon>
             </v-btn>
@@ -141,6 +143,7 @@
               small
               color="warning"
               @click="editUser(item)"
+              v-permission="'user:edit'"
             >
               <v-icon>mdi-pencil</v-icon>
             </v-btn>
@@ -149,6 +152,7 @@
               small
               :color="item.is_active ? 'error' : 'success'"
               @click="toggleUserStatus(item)"
+              v-permission="'user:status'"
             >
               <v-icon>{{ item.is_active ? 'mdi-account-off' : 'mdi-account-check' }}</v-icon>
             </v-btn>
@@ -157,6 +161,7 @@
               small
               color="error"
               @click="deleteUser(item)"
+              v-permission="'user:delete'"
             >
               <v-icon>mdi-delete</v-icon>
             </v-btn>
@@ -181,11 +186,18 @@
             <v-row>
               <v-col cols="12" md="6">
                 <v-text-field
-                  v-model="editedUser.name"
+                  v-model="editedUser.username"
                   :rules="nameRules"
-                  label="姓名 *"
+                  label="用户名 *"
                   outlined
                   required
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="editedUser.full_name"
+                  label="姓名"
+                  outlined
                 ></v-text-field>
               </v-col>
               <v-col cols="12" md="6">
@@ -205,20 +217,21 @@
                   outlined
                 ></v-text-field>
               </v-col>
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="editedUser.role"
-                  :items="roleOptions"
-                  label="用户角色 *"
-                  outlined
-                  required
-                ></v-select>
-              </v-col>
-              <v-col cols="12" v-if="!isEdit">
+              <v-col cols="12" md="6" v-if="!isEdit">
                 <v-text-field
                   v-model="editedUser.password"
                   :rules="passwordRules"
                   label="密码 *"
+                  type="password"
+                  outlined
+                  required
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="6" v-if="!isEdit">
+                <v-text-field
+                  v-model="editedUser.confirm_password"
+                  :rules="passwordRules"
+                  label="确认密码 *"
                   type="password"
                   outlined
                   required
@@ -303,10 +316,14 @@
 
 <script>
 import { ref, computed, onMounted } from 'vue'
+import { usersAPI } from '../api/users'
+import { useStore } from 'vuex'
+import { PERMISSIONS, hasPermission } from '../utils/permissions'
 
 export default {
   name: 'Users',
   setup() {
+    const store = useStore()
     const search = ref('')
     const roleFilter = ref(null)
     const statusFilter = ref(null)
@@ -319,49 +336,22 @@ export default {
     const isEdit = ref(false)
     const form = ref(null)
     
-    const users = ref([
-      {
-        id: 1,
-        name: '张三',
-        email: 'zhangsan@example.com',
-        phone: '13800138001',
-        role: 'admin',
-        is_active: true,
-        bio: '系统管理员',
-        created_at: '2024-01-01T10:00:00Z',
-        avatar: null
-      },
-      {
-        id: 2,
-        name: '李四',
-        email: 'lisi@example.com',
-        phone: '13800138002',
-        role: 'user',
-        is_active: true,
-        bio: '普通用户',
-        created_at: '2024-01-02T10:00:00Z',
-        avatar: null
-      },
-      {
-        id: 3,
-        name: '王五',
-        email: 'wangwu@example.com',
-        phone: '13800138003',
-        role: 'editor',
-        is_active: false,
-        bio: '内容编辑',
-        created_at: '2024-01-03T10:00:00Z',
-        avatar: null
-      }
-    ])
+    // 用户列表数据（从API获取）
+    const users = ref([])
+    const pagination = ref({
+      page: 1,
+      limit: 10,
+      total: 0
+    })
 
     const editedUser = ref({
       id: null,
-      name: '',
+      username: '',
+      full_name: '',
       email: '',
       phone: '',
-      role: 'user',
       password: '',
+      confirm_password: '',
       bio: '',
       is_active: true
     })
@@ -376,10 +366,10 @@ export default {
 
     const headers = [
       { text: '头像', value: 'avatar', sortable: false, width: '80px' },
-      { text: '姓名', value: 'name' },
+      { text: '用户名', value: 'username' },
+      { text: '姓名', value: 'full_name' },
       { text: '邮箱', value: 'email' },
       { text: '手机', value: 'phone' },
-      { text: '角色', value: 'role' },
       { text: '状态', value: 'is_active' },
       { text: '创建时间', value: 'created_at' },
       { text: '操作', value: 'actions', sortable: false, width: '200px' }
@@ -456,23 +446,56 @@ export default {
       }
     }
 
-    const refreshUsers = async () => {
+    // 加载用户列表
+    const loadUsers = async () => {
       loading.value = true
-      // 模拟API调用
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      loading.value = false
-      showMessage('用户列表已刷新')
+      try {
+        const params = {
+          page: pagination.value.page,
+          limit: pagination.value.limit,
+          search: search.value || undefined,
+          is_active: statusFilter.value !== null ? statusFilter.value : undefined
+        }
+        
+        const response = await usersAPI.getUsers(params)
+        
+        // 根据后端API响应结构调整
+        if (Array.isArray(response)) {
+          users.value = response
+          pagination.value.total = response.length
+        } else if (response.items) {
+          users.value = response.items
+          pagination.value.total = response.total || response.items.length
+        } else {
+          users.value = response
+          pagination.value.total = response.length || 0
+        }
+        
+        showMessage('用户列表加载成功')
+      } catch (error) {
+        console.error('加载用户列表失败:', error)
+        showMessage('加载用户列表失败：' + (error.message || '网络错误'), 'error')
+        // 如果API调用失败，使用模拟数据
+        users.value = []
+      } finally {
+        loading.value = false
+      }
+    }
+
+    const refreshUsers = async () => {
+      await loadUsers()
     }
 
     const openAddDialog = () => {
       isEdit.value = false
       editedUser.value = {
         id: null,
-        name: '',
+        username: '',
+        full_name: '',
         email: '',
         phone: '',
-        role: 'user',
         password: '',
+        confirm_password: '',
         bio: '',
         is_active: true
       }
@@ -500,33 +523,52 @@ export default {
     const saveUser = async () => {
       if (!valid.value) return
 
+      // 验证密码匹配（新用户或修改密码时）
+      if ((!isEdit.value || editedUser.value.password) && 
+          editedUser.value.password !== editedUser.value.confirm_password) {
+        showMessage('密码和确认密码不匹配', 'error')
+        return
+      }
+
       saving.value = true
       
       try {
-        // 模拟API调用
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
         if (isEdit.value) {
-          const index = users.value.findIndex(u => u.id === editedUser.value.id)
-          if (index !== -1) {
-            users.value[index] = { ...editedUser.value }
+          // 更新用户
+          const updateData = { ...editedUser.value }
+          // 如果没有新密码，删除密码字段
+          if (!updateData.password) {
+            delete updateData.password
+            delete updateData.confirm_password
           }
+          
+          const updatedUser = await usersAPI.updateUser(editedUser.value.id, updateData)
+          
+          // 更新本地数据
+          const index = users.value.findIndex(u => u.id === updatedUser.id)
+          if (index !== -1) {
+            users.value[index] = updatedUser
+          }
+          
           showMessage('用户更新成功')
         } else {
-          const newUser = {
-            ...editedUser.value,
-            id: users.value.length + 1,
-            created_at: new Date().toISOString(),
-            avatar: null
-          }
-          delete newUser.password // 实际项目中不应该在前端存储密码
+          // 创建新用户
+          const createData = { ...editedUser.value }
+          delete createData.id
+          
+          const newUser = await usersAPI.createUser(createData)
           users.value.push(newUser)
+          
           showMessage('用户创建成功')
         }
         
         closeDialog()
+        // 重新加载用户列表以确保数据同步
+        await loadUsers()
+        
       } catch (error) {
-        showMessage('操作失败，请稍后重试', 'error')
+        console.error('保存用户失败:', error)
+        showMessage('操作失败：' + (error.message || '网络错误'), 'error')
       } finally {
         saving.value = false
       }
@@ -534,10 +576,15 @@ export default {
 
     const toggleUserStatus = async (user) => {
       try {
-        user.is_active = !user.is_active
-        showMessage(`用户已${user.is_active ? '启用' : '禁用'}`)
+        const newStatus = !user.is_active
+        await usersAPI.toggleUserStatus(user.id, newStatus)
+        
+        // 更新本地状态
+        user.is_active = newStatus
+        showMessage(`用户已${newStatus ? '启用' : '禁用'}`)
       } catch (error) {
-        showMessage('操作失败，请稍后重试', 'error')
+        console.error('切换用户状态失败:', error)
+        showMessage('操作失败：' + (error.message || '网络错误'), 'error')
       }
     }
 
@@ -550,9 +597,9 @@ export default {
       deleting.value = true
       
       try {
-        // 模拟API调用
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        await usersAPI.deleteUser(userToDelete.value.id)
         
+        // 从本地数据中移除
         const index = users.value.findIndex(u => u.id === userToDelete.value.id)
         if (index !== -1) {
           users.value.splice(index, 1)
@@ -561,14 +608,16 @@ export default {
         showMessage('用户删除成功')
         deleteDialog.value = false
       } catch (error) {
-        showMessage('删除失败，请稍后重试', 'error')
+        console.error('删除用户失败:', error)
+        showMessage('删除失败：' + (error.message || '网络错误'), 'error')
       } finally {
         deleting.value = false
       }
     }
 
+    // 组件挂载时加载数据
     onMounted(() => {
-      refreshUsers()
+      loadUsers()
     })
 
     return {
@@ -597,6 +646,8 @@ export default {
       getRoleColor,
       getRoleText,
       formatDate,
+      showMessage,
+      loadUsers,
       refreshUsers,
       openAddDialog,
       editUser,

@@ -1,4 +1,5 @@
 import { createStore } from 'vuex'
+import { authAPI } from '../api/auth'
 
 // Load user from localStorage if available
 const savedUser = localStorage.getItem('user')
@@ -91,30 +92,63 @@ export default createStore({
       commit('SET_ERROR', null)
       
       try {
-        // 模拟登录API调用
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        // 模拟用户数据
-        const user = {
-          id: 1,
-          name: '管理员',
-          email: credentials.email,
-          role: 'admin',
-          avatar: null,
-          token: 'demo-token-' + Date.now()
-        }
-        
-        commit('SET_USER', user)
-        commit('ADD_NOTIFICATION', {
-          type: 'success',
-          title: '登录成功',
-          message: `欢迎回来，${user.name}！`
+        // 调用真实的登录API
+        const tokenResponse = await authAPI.login({
+          username: credentials.email, // 后端使用username字段
+          password: credentials.password
         })
         
-        return user
+        // 获取用户信息
+        try {
+          const userInfo = await authAPI.getUserInfo()
+          const user = {
+            id: userInfo.id,
+            name: userInfo.full_name || userInfo.username,
+            email: userInfo.email,
+            username: userInfo.username,
+            role: userInfo.is_superuser ? 'admin' : 'user',
+            avatar: userInfo.avatar,
+            token: tokenResponse.access_token
+          }
+          
+          commit('SET_USER', user)
+          commit('ADD_NOTIFICATION', {
+            type: 'success',
+            title: '登录成功',
+            message: `欢迎回来，${user.name}！`
+          })
+          
+          return user
+        } catch (userInfoError) {
+          // 如果获取用户信息失败，使用token信息创建基础用户对象
+          console.warn('获取用户信息失败，使用基础信息:', userInfoError)
+          const user = {
+            id: 'unknown',
+            name: credentials.email,
+            email: credentials.email,
+            username: credentials.email,
+            role: 'user',
+            avatar: null,
+            token: tokenResponse.access_token
+          }
+          
+          commit('SET_USER', user)
+          commit('ADD_NOTIFICATION', {
+            type: 'success',
+            title: '登录成功',
+            message: `欢迎回来！`
+          })
+          
+          return user
+        }
       } catch (error) {
         const errorMsg = error.message || '登录失败'
         commit('SET_ERROR', errorMsg)
+        commit('ADD_NOTIFICATION', {
+          type: 'error',
+          title: '登录失败',
+          message: errorMsg
+        })
         throw error
       } finally {
         commit('SET_LOADING', false)
@@ -126,8 +160,8 @@ export default createStore({
       commit('SET_ERROR', null)
       
       try {
-        // 模拟注册API调用
-        await new Promise(resolve => setTimeout(resolve, 1500))
+        // 调用真实的注册API
+        const user = await authAPI.register(userData)
         
         commit('ADD_NOTIFICATION', {
           type: 'success', 
@@ -135,17 +169,30 @@ export default createStore({
           message: '账户创建成功，请登录'
         })
         
-        return true
+        return user
       } catch (error) {
         const errorMsg = error.message || '注册失败'
         commit('SET_ERROR', errorMsg)
+        commit('ADD_NOTIFICATION', {
+          type: 'error',
+          title: '注册失败',
+          message: errorMsg
+        })
         throw error
       } finally {
         commit('SET_LOADING', false)
       }
     },
     
-    logout({ commit }) {
+    async logout({ commit }) {
+      try {
+        // 调用后端登出API
+        await authAPI.logout()
+      } catch (error) {
+        console.warn('后端登出请求失败:', error)
+        // 即使后端失败也继续清除本地状态
+      }
+      
       commit('LOGOUT')
       commit('ADD_NOTIFICATION', {
         type: 'info',

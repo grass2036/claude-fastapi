@@ -9,7 +9,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./app:/app/app
+      - ./backend:/app/backend
     environment:
       - ENV=development
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/claude_fastapi
