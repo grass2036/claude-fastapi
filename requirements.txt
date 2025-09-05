@@ -1,17 +1,34 @@
+# Web框架和服务器
 fastapi[standard]==0.115.0
 uvicorn[standard]==0.30.6
 python-dotenv==1.0.1
+
+# 数据验证和配置
 pydantic==2.9.1
 pydantic-settings==2.0.3
-pytest==8.3.2
-pytest-asyncio==0.24.0
-httpx==0.27.2
+email-validator==2.1.0
+
+# 数据库相关
+sqlalchemy==2.0.35  # 更新到最新稳定版本
+alembic==1.13.2     # 更新到最新版本
+psycopg2-binary==2.9.9
+
+# Redis缓存
 redis==5.0.8
 aioredis==2.0.1
-sqlalchemy==2.0.23
-alembic==1.12.1
-psycopg2-binary==2.9.9
+
+# 身份验证和安全
 passlib[bcrypt]==1.7.4
 python-jose[cryptography]==3.3.0
 PyJWT==2.8.0
-email-validator==2.1.0
+
+# 测试相关
+pytest==8.3.2
+pytest-asyncio==0.24.0
+httpx==0.27.2
+
+# 其他工具
+python-multipart==0.0.6  # 处理文件上传
+Pillow==10.4.0          # 图像处理
+openpyxl==3.1.5         # Excel文件处理
+pandas==2.2.2           # 数据分析（可选，用于数据导出）

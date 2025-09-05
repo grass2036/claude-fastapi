@@ -165,7 +165,7 @@ class SystemLogListResponse(BaseModel):
         }
 
 
-class SystemLogStats(BaseModel):
+class SystemLogStatistics(BaseModel):
     """系统日志统计模型"""
     total_logs: int = Field(description="日志总数")
     today_logs: int = Field(description="今日日志数")

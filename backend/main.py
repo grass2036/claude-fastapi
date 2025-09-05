@@ -11,6 +11,9 @@ from .db.base import create_tables
 from .api.v1.auth import router as auth_router
 from .api.v1.users import router as users_router
 from .api.v1.departments import router as departments_router
+from .api.v1.employees import router as employees_router
+from .api.v1.roles import router as roles_router
+from .api.v1.system_logs import router as system_logs_router
 
 # Redis客户端全局变量
 redis_client = None
@@ -104,6 +107,9 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(users_router, prefix="/api/v1/users", tags=["User Management"])
 app.include_router(departments_router, prefix="/api/v1/departments", tags=["Department Management"])
+app.include_router(employees_router, prefix="/api/v1/employees", tags=["Employee Management"])
+app.include_router(roles_router, prefix="/api/v1/roles", tags=["Role Permission Management"])
+app.include_router(system_logs_router, prefix="/api/v1/system-logs", tags=["System Log"])
 
 
 @app.get("/", 
