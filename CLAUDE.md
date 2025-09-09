@@ -2,135 +2,162 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## Commands
 
-This is a full-stack web application built with FastAPI (backend) and Vue.js 3 (frontend), featuring a PostgreSQL database and Redis cache. The application includes user authentication, a management dashboard, and various administrative features.
-
-## Architecture
-
-### Backend Structure
-- **Main Application**: Located in both `app/` (simple version) and `backend/` (full structure)
-- **Core Components**:
-  - `backend/main.py`: Main FastAPI application with lifespan management
-  - `backend/core/config.py`: Settings and configuration management
-  - `backend/api/v1/`: Versioned API endpoints (auth implemented)
-  - `backend/models/`: SQLAlchemy database models
-  - `backend/schemas/`: Pydantic request/response schemas
-  - `backend/crud/`: Database CRUD operations
-  - `backend/db/`: Database connection and session management
-  - `backend/alembic/`: Database migrations
-
-### Frontend Structure
-- **Framework**: Vue.js 3 with Composition API, Vuetify UI framework
-- **Key Components**:
-  - `frontend/src/router/index.js`: Vue Router with authentication guards
-  - `frontend/src/store/index.js`: Vuex state management (currently using mock data)
-  - `frontend/src/views/`: Page components (Dashboard, Users, Login, Register, etc.)
-  - Authentication flow implemented with localStorage persistence
-
-### Infrastructure
-- **Docker**: Multi-service setup with backend, frontend, database, Redis, and Nginx
-- **Database**: PostgreSQL with Alembic migrations
-- **Cache**: Redis for session management and caching
-- **Reverse Proxy**: Nginx for production deployment
-
-## Common Commands
-
-### Development (Docker)
+### Development Setup
 ```bash
-# Start all services
+# Start all services with Docker Compose
 docker-compose up -d
 
-# View logs
-docker-compose logs -f [service_name]
+# Start backend only (development mode with hot reload)
+cd backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
-# Rebuild specific service
-docker-compose build [service_name]
-docker-compose up -d [service_name]
+# Start frontend only (Vite development server)  
+cd frontend && npm run dev
 
-# Stop all services
-docker-compose down
-```
-
-### Backend Development
-```bash
-# Install dependencies
+# Install Python dependencies (use virtual environment)
 pip install -r requirements.txt
 
-# Run development server (from backend directory)
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-
-# Database migrations
-alembic upgrade head
-alembic revision --autogenerate -m "description"
-
-# Run tests (if available)
-pytest
-```
-
-### Frontend Development
-```bash
-# Install dependencies
+# Install frontend dependencies
 cd frontend && npm install
-
-# Development server
-npm run dev
-# or
-npm run serve
-
-# Build for production
-npm run build
-
-# Lint code
-npm run lint
 ```
 
-### Environment Configuration
-- Copy `.env.example` to `.env` and configure values
-- Key settings include database URL, Redis URL, JWT secret, and CORS origins
-- Frontend API URL configured via `VUE_APP_API_URL` environment variable
+### Database Management
+```bash
+# Apply database migrations
+cd backend && alembic upgrade head
 
-## Application State
+# Create new migration (after model changes)
+cd backend && alembic revision --autogenerate -m "migration description"
 
-### Backend Status
-- Basic FastAPI structure implemented
-- Redis integration working (cache endpoints available)
-- Authentication API structure in place (`backend/api/v1/auth.py`)
-- Database models and migrations configured but not fully implemented
-- Health check and cache test endpoints available
+# Database connection: postgresql://postgres:postgres@localhost:5433/claude_fastapi (external port)
+```
 
-### Frontend Status
-- Core UI components fully implemented (Login, Register, Dashboard, Users management)
-- Authentication flow working with mock data
-- State management via Vuex with localStorage persistence
-- Incomplete features: Logs, Settings, Monitoring (placeholders exist)
-- Uses demo/mock authentication - not connected to backend API yet
+### Testing and Linting
+```bash
+# Backend testing (pytest configured but no tests implemented yet)
+cd backend && pytest
 
-### Integration Points
-- Frontend currently uses mock authentication and user data
-- Backend authentication endpoints exist but frontend not yet integrated
-- CORS configured for local development (localhost:3000)
-- API base URL configurable via environment variables
+# Frontend linting
+cd frontend && npm run lint
 
-## Key Development Notes
+# Frontend build
+cd frontend && npm run build
+```
 
-### Authentication Flow
-- Backend: JWT-based authentication structure ready
-- Frontend: Mock authentication with localStorage persistence
-- Integration needed: Connect frontend auth to backend API endpoints
+## Architecture Overview
 
-### Database Schema
-- Alembic configured for migrations
-- Models defined but may need completion
-- PostgreSQL as primary database with Redis for caching
+**Full-stack FastAPI + Vue.js application** with microservices architecture using Docker containers.
 
-### Deployment
-- Production ready with Docker Compose
-- Nginx reverse proxy configured
-- Environment-based configuration
-- See `DEPLOYMENT.md` for detailed deployment instructions
+### Core Stack
+- **Backend**: FastAPI with SQLAlchemy ORM, PostgreSQL database, Redis caching
+- **Frontend**: Vue.js 3 + Vuetify 3 + Vue Router 4 + Vuex 4
+- **Infrastructure**: Docker Compose with Nginx reverse proxy
+- **Authentication**: JWT-based with access/refresh tokens and bcrypt password hashing
+
+### Key Features
+- **Enterprise-ready user management system** with employees, departments, roles, and audit logging
+- **Role-based access control (RBAC)** with multiple permission levels
+- **Comprehensive API documentation** via FastAPI's built-in Swagger UI at `/docs`
+- **Health monitoring** with Redis connectivity checks at `/health`
+- **CORS-enabled** for frontend-backend communication
+
+## Project Structure
+
+```
+backend/
+├── main.py                 # FastAPI application entry point and route registration
+├── core/                   # Core configuration and security (JWT, settings)
+├── db/base.py             # SQLAlchemy database configuration and session management  
+├── models/                 # SQLAlchemy ORM models (User, Employee, Department, Role, SystemLog)
+├── schemas/                # Pydantic validation schemas for request/response
+├── crud/                   # Database operations layer
+├── api/v1/                 # REST API endpoints (auth, users, employees, departments, roles, system-logs)
+├── alembic/                # Database migrations with Alembic
+└── utils/                  # Utility functions
+
+frontend/
+├── src/
+│   ├── main.js            # Vue app entry with Vuetify and router setup
+│   ├── api/               # Axios HTTP client configuration
+│   ├── components/        # Reusable Vue components
+│   ├── views/             # Page-level Vue components
+│   ├── router/            # Vue Router configuration
+│   └── store/             # Vuex state management
+└── package.json           # Dependencies and npm scripts
+```
+
+## Authentication System
+
+**JWT-based authentication** with the following access patterns:
+- `get_current_user()` - Basic authentication check
+- `get_current_active_user()` - Requires active user status  
+- `get_current_superuser()` - Admin-only access
+- `get_current_verified_user()` - Email verification required
+
+**Token Configuration:**
+- Access tokens: 30 minutes expiry
+- Refresh tokens: 7 days expiry
+- Stored in Redis for session management
+
+## Database Architecture
+
+**PostgreSQL with SQLAlchemy ORM** featuring:
+- **Users** table with authentication fields
+- **Employees** table linked 1:1 with Users
+- **Departments** table with hierarchical structure
+- **Roles** table with many-to-many User relationships
+- **SystemLogs** table for audit trailing
+
+**Migration workflow:**
+1. Modify models in `backend/models/`
+2. Generate migration: `alembic revision --autogenerate -m "description"`
+3. Apply migration: `alembic upgrade head`
+
+## API Endpoints
+
+All API endpoints are prefixed with `/api/v1/` and include:
+- `/auth/*` - Authentication (login, register, refresh tokens)
+- `/users/*` - User management and profiles
+- `/employees/*` - Employee information management
+- `/departments/*` - Department and organizational structure
+- `/roles/*` - Role-based access control
+- `/system-logs/*` - Audit log queries
+
+**API Documentation URLs:**
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`  
+- OpenAPI JSON: `http://localhost:8000/openapi.json`
+
+## Environment Configuration
+
+Key environment variables in `.env`:
+- `DATABASE_URL` - PostgreSQL connection string
+- `REDIS_URL` - Redis connection string  
+- `SECRET_KEY` - JWT signing secret
+- `ACCESS_TOKEN_EXPIRE_MINUTES` - Token expiry (default: 30)
+- `ALLOWED_ORIGINS` - CORS allowed origins for frontend
+
+## Docker Services
+
+**docker-compose.yml** defines 5 services:
+- **backend** (port 8000) - FastAPI application with hot reload
+- **frontend** (port 3000) - Vue.js development server
+- **nginx** (port 80) - Reverse proxy for production-like routing
+- **db** (port 5433 external) - PostgreSQL 15 database
+- **redis** (port 6379) - Redis 7 cache with persistence
+
+## Development Notes
+
+- **Hot reload enabled** for both backend and frontend in development
+- **Volume mounts** for real-time code changes without rebuilds
+- **Health checks** available at `/health` endpoint with Redis connectivity test
+- **Cache management** endpoints for Redis testing at `/cache/*`
+- **Automatic table creation** on application startup
+- **Comprehensive error handling** with proper HTTP status codes
 
 ## Testing
-- Backend: pytest configured but tests may need implementation
-- Frontend: No test framework currently configured
-- Health check endpoints available for monitoring
+
+- **pytest** configured for backend testing (framework ready, tests not implemented)
+- **httpx** included for async HTTP testing
+- Run tests with: `cd backend && pytest`
