@@ -161,3 +161,24 @@ Key environment variables in `.env`:
 - **pytest** configured for backend testing (framework ready, tests not implemented)
 - **httpx** included for async HTTP testing
 - Run tests with: `cd backend && pytest`
+
+## Documentation Resources
+
+**Extensive development documentation is available in the companion repository:**
+- **Location**: `../claude-fastapi-docs/`
+- **Content**: Comprehensive 51-day FastAPI + AI learning path with practical tutorials
+- **Key Topics**: 
+  - FastAPI advanced features (依赖注入、中间件、异步处理)
+  - Database optimization (SQLAlchemy、Redis缓存策略)
+  - AI integration (DeepSeek、LangChain、RAG系统)
+  - Production deployment (Docker、域名配置、HTTPS、监控)
+  - Security and performance optimization
+
+**Important Documents:**
+- `AI应用开发学习路径详细规划.md` - Overall learning roadmap
+- `第1-21天-*.md` - Core FastAPI development tutorials
+- `第22-51天-*.md` - AI integration and advanced topics
+- `Docker环境配置完整指南.md` - Deployment guide
+- `项目实施指引.md` - Implementation guidelines
+
+When working with advanced features or AI integrations, refer to these detailed tutorials for implementation patterns, best practices, and troubleshooting guidance.
