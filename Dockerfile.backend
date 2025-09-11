@@ -26,7 +26,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 # 复制应用代码
 COPY backend/ ./backend/
-COPY start_backend.sh ./start_backend.sh
+COPY scripts/start_backend.sh ./start_backend.sh
 RUN chmod +x ./start_backend.sh
 
 # 创建非root用户

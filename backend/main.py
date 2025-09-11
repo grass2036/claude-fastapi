@@ -6,14 +6,14 @@ import os
 from datetime import datetime
 from contextlib import asynccontextmanager
 
-from .core.config import settings
-from .db.base import create_tables
-from .api.v1.auth import router as auth_router
-from .api.v1.users import router as users_router
-from .api.v1.departments import router as departments_router
-from .api.v1.employees import router as employees_router
-from .api.v1.roles import router as roles_router
-from .api.v1.system_logs import router as system_logs_router
+from backend.core.config import settings
+from backend.db.base import create_tables
+from backend.api.v1.auth import router as auth_router
+from backend.api.v1.users import router as users_router
+from backend.api.v1.departments import router as departments_router
+from backend.api.v1.employees import router as employees_router
+from backend.api.v1.roles import router as roles_router
+from backend.api.v1.system_logs import router as system_logs_router
 
 # Redis客户端全局变量
 redis_client = None
